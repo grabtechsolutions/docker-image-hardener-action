@@ -1,0 +1,97 @@
+name: Docker Image Hardener
+description: Scans and rewrites Dockerfiles using Trivy and best practices.
+
+inputs:
+  dockerfile:
+    description: "Comma-separated list of Dockerfiles"
+    required: false
+  image:
+    description: "Comma-separated list of image names to scan"
+    required: false
+  scan:
+    description: "Run Trivy scan"
+    required: false
+    default: "false"
+  rewrite:
+    description: "Rewrite Dockerfile(s)"
+    required: false
+    default: "false"
+  fail-on-critical:
+    description: "Fail if CRITICAL vulnerabilities are found"
+    required: false
+    default: "false"
+  severity:
+    description: "Severity level to filter (e.g. CRITICAL,HIGH)"
+    required: false
+    default: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+  summary:
+    description: "Generate GitHub summary markdown table"
+    required: false
+    default: "false"
+  save-json:
+    description: "Save Trivy scan result to JSON"
+    required: false
+    default: "false"
+  sbom:
+    description: "Generate SBOM report"
+    required: false
+    default: "false"
+  sarif:
+    description: "Generate SARIF report"
+    required: false
+    default: "false"
+  scorecard:
+    description: "Generate scorecard grading"
+    required: false
+    default: "false"
+  output-dir:
+    description: "Directory to save scan results"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: 📦 Install Python dependencies
+      run: pip install -r ${{ github.action_path }}/cli/requirements.txt
+      shell: bash
+
+    - name: 🧰 Install Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl unzip gnupg
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+      shell: bash
+
+    - name: 🧪 Export Inputs as Environment Variables
+      run: |
+        echo "INPUT_DOCKERFILE=${{ inputs.dockerfile }}" >> $GITHUB_ENV
+        echo "INPUT_IMAGE=${{ inputs.image }}" >> $GITHUB_ENV
+        echo "INPUT_SCAN=${{ inputs.scan }}" >> $GITHUB_ENV
+        echo "INPUT_REWRITE=${{ inputs.rewrite }}" >> $GITHUB_ENV
+        echo "INPUT_FAIL_ON_CRITICAL=${{ inputs.fail-on-critical }}" >> $GITHUB_ENV
+        echo "INPUT_SEVERITY=${{ inputs.severity }}" >> $GITHUB_ENV
+        echo "INPUT_SUMMARY=${{ inputs.summary }}" >> $GITHUB_ENV
+        echo "INPUT_SAVE_JSON=${{ inputs.save-json }}" >> $GITHUB_ENV
+        echo "INPUT_SBOM=${{ inputs.sbom }}" >> $GITHUB_ENV
+        echo "INPUT_SARIF=${{ inputs.sarif }}" >> $GITHUB_ENV
+        echo "INPUT_SCORECARD=${{ inputs.scorecard }}" >> $GITHUB_ENV
+        echo "INPUT_OUTPUT_DIR=${{ inputs.output-dir }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: 🚀 Run Docker Hardener
+      run: |
+        bash ${{ github.action_path }}/entrypoint.sh
+      shell: bash
+
+    - name: Upload Scan artifacts
+      if: always()  # Upload even if job failed
+      uses: actions/upload-artifact@v4
+      with:
+        name: scan-artifacts
+        path: artifact_scan/

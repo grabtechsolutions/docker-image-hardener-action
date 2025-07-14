@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: 🔒 Run Docker Image Hardener
-        uses: developer9508/docker-image-hardener-action@main
+        uses: grabtechsolutions/docker-image-hardener-action/@v1
         with:
           dockerfile: examples/sample.Dockerfile
           scan: true
